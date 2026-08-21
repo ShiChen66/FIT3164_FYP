@@ -1,0 +1,39 @@
+# ---- Python / ML ----
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Model checkpoints — large binary files, don't belong in git
+*.pt
+*.pth
+*.ckpt
+ml/checkpoints/
+
+# Datasets — Fakeddit TSVs, TweetEval text files, HF cache, etc.
+ml/data/
+.cache/
+*.tsv
+*.arrow
+
+# ---- Node / Chrome extension (if a build step is added later) ----
+node_modules/
+dist/
+build/
+*.log
+
+# ---- Environment / secrets ----
+.env
+.env.local
+
+# ---- OS / Editor ----
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
