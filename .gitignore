@@ -9,13 +9,13 @@ env/
 .pytest_cache/
 .ipynb_checkpoints/
 
-# Model checkpoints — large binary files, don't belong in git
+# Model checkpoints - large binary files, don't belong in git
 *.pt
 *.pth
 *.ckpt
 ml/checkpoints/
 
-# Datasets — Fakeddit TSVs, TweetEval text files, HF cache, etc.
+# Datasets - Fakeddit TSVs, TweetEval text files, HF cache, etc.
 ml/data/
 .cache/
 *.tsv
