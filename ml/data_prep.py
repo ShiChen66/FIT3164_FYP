@@ -40,13 +40,15 @@ def load_fakeddit(split: str = "train", max_samples: int | None = None) -> Datas
     path = FAKEDDIT_PATHS[split]
     df = pd.read_csv(path, sep="\t")
     df = df.loc[:, ~df.columns.str.contains("^Unnamed")]
+    df = df.dropna(subset=["clean_title"])
+
+    df["text"] = df["clean_title"].apply(clean_text)
+    df = df[df["text"].str.len() > 0]
 
     if max_samples:
         df = df.head(max_samples)
 
-    df["text"] = (df["clean_title"].fillna("") ).apply(clean_text)
     df["label"] = df["2_way_label"].astype(int)
-
     return Dataset.from_pandas(df[["text", "label"]], preserve_index=False)
 
 def load_tweeteval_sentiment(split: str = "train", max_samples: int | None = None) -> Dataset:
