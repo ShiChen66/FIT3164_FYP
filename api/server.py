@@ -13,7 +13,7 @@ Response (to popup.js):    { "results": [
 Run with:
 pip install fastapi uvicorn
 uvicorn server:app --port 8000 --reload
-(run from inside api/, with ml/ as a sibling folder — see the sys.path line below)
+run from inside api/
 """
  
 import os
@@ -29,17 +29,12 @@ from model import DualHeadRobertaClassifier, predict, BASE_MODEL
  
 app = FastAPI(title="Reddit AI Checker API")
  
-# CORS: host_permissions in manifest.json should let the extension's popup
-# call this API directly without needing CORS headers, but this is left on
-# as a safety net in case that assumption doesn't hold on every browser/setup.
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_methods=["POST"],
     allow_headers=["*"],
 )
- 
-# --- Load model + tokenizer once at startup, not per-request ---
  
 tokenizer = RobertaTokenizerFast.from_pretrained(BASE_MODEL)
 model = DualHeadRobertaClassifier()
