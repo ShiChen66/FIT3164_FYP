@@ -45,11 +45,11 @@ if os.path.exists(MISINFO_CHECKPOINT):
     model.load_state_dict(torch.load(MISINFO_CHECKPOINT, map_location="cpu"))
     print(f"Loaded trained weights from {MISINFO_CHECKPOINT}")
 else:
-    print("WARNING: no checkpoint found — serving predictions from an untrained model.")
+    print("WARNING: no checkpoint found - serving predictions from an untrained model.")
  
 model.eval()
  
- 
+
 class AnalyseRequest(BaseModel):
     texts: list[str]
  
