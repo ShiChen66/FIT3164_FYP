@@ -35,34 +35,48 @@ class DualHeadRobertaClassifier(nn.Module):
         hidden_size = self.encoder.config.hidden_size
         self.misinformation_head = ClassificationHead(hidden_size, len(MISINFORMATION_LABELS))
         self.sentiment_head = ClassificationHead(hidden_size, len(SENTIMENT_LABELS))
- 
+
     def forward(self, input_ids: torch.Tensor, attention_mask: torch.Tensor):
         outputs = self.encoder(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = outputs.last_hidden_state[:, 0, :]
         misinformation_logits = self.misinformation_head(cls_embedding)
         sentiment_logits = self.sentiment_head(cls_embedding)
         return misinformation_logits, sentiment_logits 
-
+    
 @dataclass
 class Prediction:
     misinformation_label: str
     misinformation_confidence: float
     sentiment_label: str
     sentiment_scores: dict
- 
- 
-def predict(model: DualHeadRobertaClassifier, tokenizer, text: str, device="cpu") -> Prediction:
+
+def load_model(checkpoint_path: str, device: str = "cpu") -> DualHeadRobertaClassifier:
+    model = DualHeadRobertaClassifier().to(device)
+    model.load_state_dict(torch.load(checkpoint_path, map_location=device))
     model.eval()
+    return model
+
+def predict(
+    misinfo_model: DualHeadRobertaClassifier,
+    sentiment_model: DualHeadRobertaClassifier,
+    tokenizer,
+    text: str,
+    device: str = "cpu",
+) -> Prediction:
+    misinfo_model.eval()
+    sentiment_model.eval()
     encoded = tokenizer(text, truncation=True, padding=True, max_length=256, return_tensors="pt").to(device)
+
     with torch.no_grad():
-        misinfo_logits, sentiment_logits = model(**encoded)
- 
+        misinfo_logits, _unused_sentiment_logits = misinfo_model(**encoded)
+        _unused_misinfo_logits, sentiment_logits = sentiment_model(**encoded)
+
     misinfo_probs = torch.softmax(misinfo_logits, dim=-1)[0]
     sentiment_probs = torch.softmax(sentiment_logits, dim=-1)[0]
- 
+
     misinfo_idx = int(torch.argmax(misinfo_probs))
     sentiment_idx = int(torch.argmax(sentiment_probs))
- 
+
     return Prediction(
         misinformation_label=MISINFORMATION_LABELS[misinfo_idx],
         misinformation_confidence=float(misinfo_probs[misinfo_idx]),
@@ -71,8 +85,7 @@ def predict(model: DualHeadRobertaClassifier, tokenizer, text: str, device="cpu"
             label: float(p) for label, p in zip(SENTIMENT_LABELS, sentiment_probs.tolist())
         },
     )
- 
- 
+
 if __name__ == "__main__":
     tokenizer = RobertaTokenizerFast.from_pretrained(BASE_MODEL)
     model = DualHeadRobertaClassifier()
