@@ -1,5 +1,5 @@
 """
-Fine-tunes the shared encoder and misinformation head on Fakeddit
+Fine-tunes the shared encoder and sentiment head on TweetEval
 """
 import os
 os.environ["TOKENIZERS_PARALLELISM"] = "false"
@@ -11,17 +11,17 @@ from torch.utils.data import DataLoader
 from transformers import RobertaTokenizerFast, DataCollatorWithPadding
 from sklearn.metrics import accuracy_score, f1_score
 
-from data_prep import load_fakeddit
+from data_prep import load_tweeteval_sentiment
 from model import DualHeadRobertaClassifier, BASE_MODEL
 
 DEVICE = "cuda" if torch.cuda.is_available() else "cpu"
 BATCH_SIZE = 8
 LEARNING_RATE = 2e-5
 EPOCHS = 2
-MAX_SAMPLES_SMOKE_TEST = 50000
+MAX_SAMPLES_SMOKE_TEST = None
 
 def build_loader(tokenizer, split, max_samples, shuffle):
-    dataset = load_fakeddit(split=split, max_samples=max_samples)
+    dataset = load_tweeteval_sentiment(split=split, max_samples=max_samples)
 
     def tokenize_fn(batch):
         return tokenizer(batch["text"], truncation=True, max_length=256)
@@ -37,11 +37,10 @@ def build_loader(tokenizer, split, max_samples, shuffle):
             [{"input_ids": item["input_ids"], "attention_mask": item["attention_mask"]} for item in batch]
         )
         return encoded, labels
-
+ 
     return DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=shuffle, collate_fn=collate_fn)
 
-
-def evaluate(model, tokenizer, split="test", max_samples=None):
+def evaluate(model, tokenizer, split="validation", max_samples=None):
     model.eval()
     loader = build_loader(tokenizer, split=split, max_samples=max_samples, shuffle=False)
 
@@ -49,14 +48,14 @@ def evaluate(model, tokenizer, split="test", max_samples=None):
     with torch.no_grad():
         for encoded, labels in loader:
             encoded = {k: v.to(DEVICE) for k, v in encoded.items()}
-            misinfo_logits, _sentiment_logits = model(**encoded)
-            preds = torch.argmax(misinfo_logits, dim=-1).cpu().tolist()
+            _misinfo_logits, sentiment_logits = model(**encoded)
+            preds = torch.argmax(sentiment_logits, dim=-1).cpu().tolist()
             all_preds.extend(preds)
             all_labels.extend(labels.tolist())
 
     acc = accuracy_score(all_labels, all_preds)
-    f1 = f1_score(all_labels, all_preds)
-    print(f"Misinformation Test Accuracy: {acc:.4f}, F1: {f1:.4f}")
+    f1 = f1_score(all_labels, all_preds, average="macro")
+    print(f"Sentiment Test Accuracy: {acc:.4f}, Macro F1: {f1:.4f}")
     return acc, f1
 
 def train():
@@ -66,7 +65,7 @@ def train():
     optimizer = torch.optim.AdamW(model.parameters(), lr=LEARNING_RATE)
     criterion = torch.nn.CrossEntropyLoss()
 
-    print("Starting load_fakeddit...")
+    print("Starting load_tweeteval_sentiment...")
     t0 = time.time()
     train_loader = build_loader(
         tokenizer, split="train", max_samples=MAX_SAMPLES_SMOKE_TEST, shuffle=True
@@ -83,8 +82,8 @@ def train():
             labels = labels.to(DEVICE)
 
             optimizer.zero_grad()
-            misinformation_logits, _sentiment_logits = model(**encoded)
-            loss = criterion(misinformation_logits, labels)
+            _misinfo_logits, sentiment_logits = model(**encoded)
+            loss = criterion(sentiment_logits, labels)
             loss.backward()
             optimizer.step()
 
@@ -95,12 +94,12 @@ def train():
         avg_loss = total_loss / len(train_loader)
         print(f"Epoch [{epoch + 1}/{EPOCHS}] completed. Average Loss: {avg_loss:.4f}")
 
-    torch.save(model.state_dict(), "misinformation_checkpoint.pt")
-    print("Saved model checkpoint to misinformation_checkpoint.pt")
+    torch.save(model.state_dict(), "sentiment_checkpoint.pt")
+    print("Saved model checkpoint to sentiment_checkpoint.pt")
 
-    print("Running evaluation on held-out test set (all_test_public.tsv)...")
-    evaluate(model, tokenizer, split="test", max_samples=5000)
+    print("Running evaluation on held-out validation set...")
+    evaluate(model, tokenizer, split="validation", max_samples=2000)
 
 if __name__ == "__main__":
-    print("Starting training for misinformation detection...")
+    print("Starting training for sentiment analysis...")
     train()
