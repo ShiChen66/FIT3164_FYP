@@ -47,7 +47,7 @@ def load_or_warn(checkpoint_path: str, label: str) -> DualHeadRobertaClassifier:
     if os.path.exists(checkpoint_path):
         print(f"Loaded {label} weights from {checkpoint_path}")
         return load_model(checkpoint_path)
-    print(f"WARNING: {checkpoint_path} not found — serving {label} predictions from an UNTRAINED model.")
+    print(f"WARNING: {checkpoint_path} not found - serving {label} predictions from an UNTRAINED model.")
     model = DualHeadRobertaClassifier()
     model.eval()
     return model

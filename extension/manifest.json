@@ -1,12 +1,16 @@
 {
   "manifest_version": 3,
   "name": "Reddit Misinformation Checker",
-  "version": "0.2",
+  "version": "0.4",
   "description": "Flags possible misinformation and shows sentiment for posts on the current Reddit page.",
-  "permissions": ["activeTab", "scripting"],
+  "permissions": ["activeTab", "scripting", "sidePanel"],
   "host_permissions": ["http://127.0.0.1:8000/*"],
-  "action": {
-    "default_popup": "popup.html"
+  "action": {},
+  "background": {
+    "service_worker": "background.js"
+  },
+  "side_panel": {
+    "default_path": "popup.html"
   },
   "content_scripts": [
     {

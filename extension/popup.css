@@ -1,7 +1,14 @@
-body {
-  width: 320px;
+html, body {
+  height: 100%;
   margin: 0;
+}
+
+body {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
   padding: 12px;
+  box-sizing: border-box;
   font-family: Arial, Helvetica, sans-serif;
   font-size: 13px;
   color: #1a1a1b;
@@ -11,18 +18,21 @@ body {
 h1 {
   font-size: 15px;
   margin: 0 0 8px 0;
+  flex: 0 0 auto;
 }
 
 #status {
   margin: 0 0 8px 0;
   color: #555;
+  flex: 0 0 auto;
 }
 
 ul {
   list-style: none;
   margin: 0;
   padding: 0;
-  max-height: 320px;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
 }
 
@@ -58,6 +68,7 @@ li {
 }
 
 button {
+  flex: 0 0 auto;
   width: 100%;
   margin-top: 10px;
   padding: 6px;
