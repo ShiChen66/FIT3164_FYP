@@ -103,8 +103,8 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 function pushCurrentContent() {
   const content = readPageContent();
 
-  if (content.type === "post" && !content.post.title) return; // not rendered yet
-  if (content.type === "listing" && content.titles.length === 0) return; // not rendered yet
+  if (content.type === "post" && !content.post.title) return; 
+  if (content.type === "listing" && content.titles.length === 0) return; 
 
   chrome.runtime.sendMessage({ type: "pageContentUpdated", payload: content }).catch(() => {
 
