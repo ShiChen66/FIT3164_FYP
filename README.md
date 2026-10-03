@@ -1,4 +1,4 @@
 <h1>Reddit AI sentiment and misinformation analysis project</h1>
 
 <p>Misinformation Test Accuracy: 0.8608, F1: 0.8633</p>
-<p>Sentiment Test Accuracy: 0.7320, F1: 0.7128</p>
+<p>Sentiment Test Accuracy: 0.7385, F1: 0.7246</p>

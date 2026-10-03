@@ -9,7 +9,7 @@ import time
 import torch
 from torch.utils.data import DataLoader
 from transformers import RobertaTokenizerFast, DataCollatorWithPadding
-from sklearn.metrics import accuracy_score, f1_score
+from sklearn.metrics import accuracy_score, f1_score, classification_report
 
 from data_prep import load_tweeteval_sentiment
 from model import DualHeadRobertaClassifier, BASE_MODEL
@@ -55,7 +55,8 @@ def evaluate(model, tokenizer, split="validation", max_samples=None):
 
     acc = accuracy_score(all_labels, all_preds)
     f1 = f1_score(all_labels, all_preds, average="macro")
-    print(f"Sentiment Test Accuracy: {acc:.4f}, Macro F1: {f1:.4f}")
+    print(f"Sentiment Test Accuracy: {acc:.4f},  F1: {f1:.4f}")
+    print(classification_report(all_labels, all_preds, target_names=["negative", "neutral", "positive"]))
     return acc, f1
 
 def train():
