@@ -1,2 +1,5 @@
 fastapi>=0.110
 uvicorn>=0.29
+torch>=2.1
+transformers>=4.40
+huggingface_hub>=0.23
