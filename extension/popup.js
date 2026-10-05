@@ -1,4 +1,5 @@
 const API_URL = "http://127.0.0.1:8000/analyse";
+const AUTO_UPDATE_DEBOUNCE_MS = 1000;
 
 const statusEl = document.getElementById("status");
 const resultsEl = document.getElementById("results");
@@ -42,6 +43,53 @@ function renderListing(results) {
   }
 }
 
+function renderSentimentBreakdown(commentResults) {
+  const counts = { negative: 0, neutral: 0, positive: 0 };
+  for (const result of commentResults) {
+    if (counts.hasOwnProperty(result.sentiment_label)) {
+      counts[result.sentiment_label]++;
+    }
+  }
+  const total = commentResults.length;
+
+  const container = document.createElement("li");
+  container.className = "sentiment-breakdown";
+
+  const label = document.createElement("div");
+  label.className = "sentiment-breakdown-label";
+  label.textContent = "Comment sentiment breakdown";
+  container.appendChild(label);
+
+  for (const key of ["negative", "neutral", "positive"]) {
+    const percent = total > 0 ? Math.round((counts[key] / total) * 100) : 0;
+
+    const row = document.createElement("div");
+    row.className = "sentiment-breakdown-row";
+
+    const rowLabel = document.createElement("span");
+    rowLabel.className = "sentiment-breakdown-row-label";
+    rowLabel.textContent = key;
+    row.appendChild(rowLabel);
+
+    const track = document.createElement("div");
+    track.className = "sentiment-breakdown-track";
+    const fill = document.createElement("div");
+    fill.className = "sentiment-breakdown-fill " + key;
+    fill.style.width = percent + "%";
+    track.appendChild(fill);
+    row.appendChild(track);
+
+    const percentLabel = document.createElement("span");
+    percentLabel.className = "sentiment-breakdown-percent";
+    percentLabel.textContent = percent + "%";
+    row.appendChild(percentLabel);
+ 
+    container.appendChild(row);
+  }
+ 
+  return container;
+}
+
 function renderPost(postResult, commentResults) {
   resultsEl.textContent = "";
 
@@ -49,6 +97,7 @@ function renderPost(postResult, commentResults) {
   resultsEl.appendChild(renderResultItem(postResult));
 
   if (commentResults.length > 0) {
+    resultsEl.appendChild(renderSentimentBreakdown(commentResults));
     resultsEl.appendChild(makeHeading("Comments (" + commentResults.length + ")"));
     for (const result of commentResults) {
       resultsEl.appendChild(renderResultItem(result));
@@ -101,6 +150,22 @@ function analysePost(post, comments) {
     .catch(handleApiError);
 }
 
+function handleContent(content) {
+  if (content.type === "post") {
+    if (!content.post.title) {
+      statusEl.textContent = "Could not read this post.";
+      return;
+    }
+    analysePost(content.post, content.comments);
+  } else {
+    if (content.titles.length === 0) {
+      statusEl.textContent = "No posts found on this page.";
+      return;
+    }
+    analyseListing(content.titles);
+  }
+}
+
 function run() {
   resultsEl.textContent = "";
   statusEl.textContent = "Reading page...";
@@ -116,23 +181,21 @@ function run() {
         statusEl.textContent = "Open a Reddit page and try again.";
         return;
       }
- 
-      if (response.type === "post") {
-        if (!response.post.title) {
-          statusEl.textContent = "Could not read this post.";
-          return;
-        }
-        analysePost(response.post, response.comments);
-      } else {
-        if (response.titles.length === 0) {
-          statusEl.textContent = "No posts found on this page.";
-          return;
-        }
-        analyseListing(response.titles);
-      }
+      handleContent(response);
     });
   });
 }
+
+let autoUpdateTimer = null;
+
+chrome.runtime.onMessage.addListener(function (message) {
+  if (message.type !== "pageContentUpdated") return;
+
+  clearTimeout(autoUpdateTimer);
+  autoUpdateTimer = setTimeout(function () {
+    handleContent(message.payload);
+  }, AUTO_UPDATE_DEBOUNCE_MS);
+});
 
 document.getElementById("rerun").addEventListener("click", run);
 run();

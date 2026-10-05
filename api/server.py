@@ -25,8 +25,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from transformers import RobertaTokenizerFast
+from huggingface_hub import hf_hub_download
 
 from model import DualHeadRobertaClassifier, predict, load_model, BASE_MODEL
+from data_prep import clean_text
 
 app = FastAPI(title="Reddit AI Checker API")
 
@@ -39,21 +41,21 @@ app.add_middleware(
 
 tokenizer = RobertaTokenizerFast.from_pretrained(BASE_MODEL)
 
-ML_DIR = os.path.join(os.path.dirname(__file__), "..", "ml")
-MISINFO_CHECKPOINT = os.path.join(ML_DIR, "misinformation_checkpoint.pt")
-SENTIMENT_CHECKPOINT = os.path.join(ML_DIR, "sentiment_checkpoint.pt")
+REPO_ID = "ShiChenLee/FYP_misinfoandsentiment"
 
-def load_or_warn(checkpoint_path: str, label: str) -> DualHeadRobertaClassifier:
-    if os.path.exists(checkpoint_path):
-        print(f"Loaded {label} weights from {checkpoint_path}")
+def load_or_warn(filename: str, label: str) -> DualHeadRobertaClassifier:
+    try:
+        checkpoint_path = hf_hub_download(repo_id=REPO_ID, filename=filename)
+        print(f"Loaded {label} weights from Hugging Face Hub: {REPO_ID}/{filename}")
         return load_model(checkpoint_path)
-    print(f"WARNING: {checkpoint_path} not found - serving {label} predictions from an UNTRAINED model.")
-    model = DualHeadRobertaClassifier()
-    model.eval()
-    return model
+    except Exception as e:
+        print(f"WARNING: could not fetch {filename} from Hub ({e}) - serving {label} predictions from an UNTRAINED model.")
+        model = DualHeadRobertaClassifier()
+        model.eval()
+        return model
 
-misinfo_model = load_or_warn(MISINFO_CHECKPOINT, "misinformation")
-sentiment_model = load_or_warn(SENTIMENT_CHECKPOINT, "sentiment")
+misinfo_model = load_or_warn("misinformation_checkpoint.pt", "misinformation")
+sentiment_model = load_or_warn("sentiment_checkpoint.pt", "sentiment")
  
 class AnalyseRequest(BaseModel):
     texts: list[str]
@@ -66,7 +68,15 @@ def health():
 def analyse(req: AnalyseRequest):
     results = []
     for text in req.texts:
-        pred = predict(misinfo_model, sentiment_model, tokenizer, text)
+        cleaned = clean_text(text)
+        pred = predict(misinfo_model, sentiment_model, tokenizer, cleaned)
+
+        print("----")
+        print("original:", text[:80])
+        print("cleaned: ", cleaned[:80])
+        print("sentiment_scores:", pred.sentiment_scores)
+        print("sentiment_label:", pred.sentiment_label)
+
         results.append({
             "text": text,
             "misinformation_label": pred.misinformation_label,
