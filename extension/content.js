@@ -102,21 +102,66 @@ chrome.runtime.onMessage.addListener(function (message, sender, sendResponse) {
 
 function pushCurrentContent() {
   const content = readPageContent();
+  console.log("[reddit-checker] pushCurrentContent read:", content);
 
-  if (content.type === "post" && !content.post.title) return; 
-  if (content.type === "listing" && content.titles.length === 0) return; 
+  if (content.type === "post" && !content.post.title) {
+    console.log("[reddit-checker] bailing — post title is empty, page not rendered yet?");
+    return;
+  }
+  if (content.type === "listing" && content.titles.length === 0) {
+    console.log("[reddit-checker] bailing — no listing titles found");
+    return;
+  }
 
-  chrome.runtime.sendMessage({ type: "pageContentUpdated", payload: content }).catch(() => {
+  console.log("[reddit-checker] sending pageContentUpdated");
+  chrome.runtime.sendMessage({ type: "pageContentUpdated", payload: content })
+    .then(() => console.log("[reddit-checker] message delivered"))
+    .catch((err) => console.log("[reddit-checker] no listener (side panel closed?)", err));
+}
 
+const STABILITY_WAIT_MS = 800;
+const MAX_WAIT_MS = 6000;
+
+let stabilityTimer = null;
+let maxWaitTimer = null;
+let navigationObserver = null;
+
+function stopWaitingForStableContent() {
+  if (navigationObserver) {
+    navigationObserver.disconnect();
+    navigationObserver = null;
+  }
+  clearTimeout(stabilityTimer);
+  clearTimeout(maxWaitTimer);
+  stabilityTimer = null;
+  maxWaitTimer = null;
+}
+
+function waitForStableContentThenPush() {
+  stopWaitingForStableContent();
+
+  const pushAndStop = function () {
+    stopWaitingForStableContent();
+    pushCurrentContent();
+  };
+
+  stabilityTimer = setTimeout(pushAndStop, STABILITY_WAIT_MS);
+  maxWaitTimer = setTimeout(pushAndStop, MAX_WAIT_MS);
+ 
+  navigationObserver = new MutationObserver(function () {
+    clearTimeout(stabilityTimer);
+    stabilityTimer = setTimeout(pushAndStop, STABILITY_WAIT_MS);
   });
+  navigationObserver.observe(document.body, { childList: true, subtree: true });
 }
 
 let lastUrl = window.location.href;
 setInterval(function () {
   if (window.location.href !== lastUrl) {
+    console.log("[reddit-checker] URL changed:", lastUrl, "->", window.location.href);
     lastUrl = window.location.href;
-    setTimeout(pushCurrentContent, 600);
+    waitForStableContentThenPush();
   }
 }, 500);
 
-setTimeout(pushCurrentContent, 600);
+waitForStableContentThenPush();
