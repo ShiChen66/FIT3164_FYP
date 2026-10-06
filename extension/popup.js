@@ -126,9 +126,15 @@ function handleApiError(error) {
 function analyseListing(titles) {
   statusEl.textContent = "Analysing " + titles.length + " posts...";
 
+  const startTime = performance.now();
+
   callApi(titles)
     .then(function (data) {
-      statusEl.textContent = "Checked " + data.results.length + " posts.";
+      const timeMessage = showAnalysisTime(startTime);
+
+      statusEl.textContent =
+        "Checked " + data.results.length + " posts. " + timeMessage;
+
       renderListing(data.results);
     })
     .catch(handleApiError);
@@ -138,16 +144,37 @@ function analysePost(post, comments) {
   const postText = (post.title + " " + (post.body || "")).trim();
   const allTexts = [postText].concat(comments);
 
-  statusEl.textContent = "Analysing post and " + comments.length + " comments...";
+  statusEl.textContent =
+    "Analysing post and " + comments.length + " comments...";
+
+  const startTime = performance.now();
 
   callApi(allTexts)
     .then(function (data) {
       const postResult = data.results[0];
       const commentResults = data.results.slice(1);
-      statusEl.textContent = "Checked post and " + commentResults.length + " comments.";
+      const timeMessage = showAnalysisTime(startTime);
+
+      statusEl.textContent =
+        "Checked post and " +
+        commentResults.length +
+        " comments. " +
+        timeMessage;
+
       renderPost(postResult, commentResults);
     })
     .catch(handleApiError);
+}
+
+function showAnalysisTime(startTime) {
+  const endTime = performance.now();
+  const elapsedSeconds = ((endTime - startTime) / 1000).toFixed(2);
+
+  if (elapsedSeconds <= 10) {
+    return "Completed in " + elapsedSeconds + "s ✓";
+  } else {
+    return "Completed in " + elapsedSeconds + "s - exceeded 10s";
+  }
 }
 
 function handleContent(content) {
