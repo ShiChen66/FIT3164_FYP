@@ -53,5 +53,19 @@ The extension icon should now appear in your Chrome toolbar.
    finished loading.
 4. Use **Check again** to manually re-run analysis at any time.
 
+## Interface
+
+The side panel has three views and switches between them automatically:
+
+- **Home** - shown when the active tab is not a Reddit page. Explains what the
+  tool does, reports model accuracy, and lists recent scans.
+- **Listing** - a subreddit page. Summary counts plus All / Flagged / Clean filters.
+- **Post** - a single discussion. Verdict card with a confidence meter, a comment
+  sentiment breakdown, and a Comments tab that can be filtered and sorted.
+
+Every verdict is shown with an icon, a shape glyph, a word and a percentage, so
+no indicator depends on colour alone. Light and dark themes are switchable from
+the toggle in the panel header and the choice is remembered.
+
 <p>Misinformation Test Accuracy: 0.8608, F1: 0.8633</p>
 <p>Sentiment Test Accuracy: 0.7624, F1: 0.7385</p>
